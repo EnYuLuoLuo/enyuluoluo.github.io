@@ -287,4 +287,511 @@
         }
         
         .message.error {
-            backgrou
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .message.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .empty-message {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .import-export-section {
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+            padding: 25px;
+            margin-top: 25px;
+        }
+        
+        .import-export-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .form-actions, .import-export-actions {
+                flex-direction: column;
+            }
+            
+            button {
+                width: 100%;
+            }
+            
+            .word-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .word-info {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .word-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+            
+            .nav-links {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .nav-bar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .logo {
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <div class="logo">英文单词学习工具</div>
+        <div class="nav-links">
+            <a href="index.html" class="nav-link">学习单词</a>
+            <a href="add_word.html" class="nav-link active">管理单词</a>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <div class="header">
+            <h1>单词管理</h1>
+            <p class="description">添加、编辑和删除单词，所有数据将保存在浏览器本地存储中</p>
+        </div>
+        
+        <div class="add-word-form">
+            <h2 class="form-title">添加新单词</h2>
+            
+            <div id="messageArea"></div>
+            
+            <div class="form-group">
+                <label for="wordInput">英文单词</label>
+                <input type="text" id="wordInput" placeholder="输入英文单词，如：computer">
+            </div>
+            
+            <div class="form-group">
+                <label for="posInput">词性</label>
+                <input type="text" id="posInput" placeholder="输入词性，如：n. (名词), v. (动词), adj. (形容词)">
+            </div>
+            
+            <div class="form-group">
+                <label for="meaningInput">中文释义</label>
+                <input type="text" id="meaningInput" placeholder="输入中文释义，如：计算机">
+            </div>
+            
+            <div class="form-actions">
+                <button id="addWordBtn">添加单词</button>
+                <button id="clearFormBtn">清空表单</button>
+            </div>
+        </div>
+        
+        <div class="import-export-section">
+            <h2 class="form-title">导入/导出单词</h2>
+            <p>您可以将单词数据导出为JSON文件备份，或从JSON文件导入单词数据。</p>
+            
+            <div class="import-export-actions">
+                <button id="exportBtn">导出单词数据</button>
+                <button id="importBtn">导入单词数据</button>
+                <button id="clearAllBtn">清空所有单词</button>
+            </div>
+            
+            <input type="file" id="importFileInput" accept=".json" class="hidden">
+        </div>
+        
+        <div class="word-list-container">
+            <div class="word-list-header">
+                <h2 class="form-title">单词列表</h2>
+                <div class="word-count">共 <span id="wordCount">0</span> 个单词</div>
+            </div>
+            
+            <div class="word-list" id="wordList">
+                <!-- 单词列表将通过JavaScript动态生成 -->
+            </div>
+            
+            <div class="empty-message" id="emptyMessage">
+                <p>暂无单词，请先添加单词</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>英文单词学习工具 | 数据存储在浏览器本地</p>
+    </div>
+
+    <script>
+        // 单词数据存储键
+        const WORD_STORAGE_KEY = 'english_vocabulary_words';
+        
+        // 获取DOM元素
+        const wordInput = document.getElementById('wordInput');
+        const posInput = document.getElementById('posInput');
+        const meaningInput = document.getElementById('meaningInput');
+        const addWordBtn = document.getElementById('addWordBtn');
+        const clearFormBtn = document.getElementById('clearFormBtn');
+        const exportBtn = document.getElementById('exportBtn');
+        const importBtn = document.getElementById('importBtn');
+        const importFileInput = document.getElementById('importFileInput');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const wordList = document.getElementById('wordList');
+        const wordCount = document.getElementById('wordCount');
+        const emptyMessage = document.getElementById('emptyMessage');
+        const messageArea = document.getElementById('messageArea');
+        
+        // 从localStorage加载单词
+        function loadWordsFromStorage() {
+            const wordsJson = localStorage.getItem(WORD_STORAGE_KEY);
+            if (wordsJson) {
+                return JSON.parse(wordsJson);
+            }
+            return [];
+        }
+        
+        // 保存单词到localStorage
+        function saveWordsToStorage(words) {
+            localStorage.setItem(WORD_STORAGE_KEY, JSON.stringify(words));
+        }
+        
+        // 显示消息
+        function showMessage(message, type = 'info') {
+            messageArea.innerHTML = `
+                <div class="message ${type}">
+                    ${message}
+                </div>
+            `;
+            
+            // 3秒后自动消失
+            setTimeout(() => {
+                messageArea.innerHTML = '';
+            }, 3000);
+        }
+        
+        // 渲染单词列表
+        function renderWordList() {
+            const words = loadWordsFromStorage();
+            
+            // 更新单词计数
+            wordCount.textContent = words.length;
+            
+            // 清空单词列表
+            wordList.innerHTML = '';
+            
+            if (words.length === 0) {
+                // 显示空列表消息
+                emptyMessage.classList.remove('hidden');
+                return;
+            }
+            
+            // 隐藏空列表消息
+            emptyMessage.classList.add('hidden');
+            
+            // 渲染每个单词
+            words.forEach((word, index) => {
+                const wordItem = document.createElement('div');
+                wordItem.className = 'word-item';
+                wordItem.dataset.index = index;
+                
+                wordItem.innerHTML = `
+                    <div class="word-info">
+                        <div class="word-text">${word.word}</div>
+                        <div class="pos-badge">${word.pos}</div>
+                        <div class="meaning-text">${word.meaning}</div>
+                    </div>
+                    <div class="word-actions">
+                        <button class="action-btn delete-btn" data-index="${index}">删除</button>
+                    </div>
+                `;
+                
+                wordList.appendChild(wordItem);
+            });
+            
+            // 为删除按钮添加事件监听器
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const index = parseInt(this.dataset.index);
+                    deleteWord(index);
+                });
+            });
+        }
+        
+        // 添加单词
+        function addWord() {
+            const word = wordInput.value.trim();
+            const pos = posInput.value.trim();
+            const meaning = meaningInput.value.trim();
+            
+            // 验证输入
+            if (!word) {
+                showMessage('请输入英文单词', 'error');
+                wordInput.focus();
+                return;
+            }
+            
+            if (!pos) {
+                showMessage('请输入词性', 'error');
+                posInput.focus();
+                return;
+            }
+            
+            if (!meaning) {
+                showMessage('请输入中文释义', 'error');
+                meaningInput.focus();
+                return;
+            }
+            
+            // 加载现有单词
+            const words = loadWordsFromStorage();
+            
+            // 检查单词是否已存在
+            const existingWord = words.find(w => w.word.toLowerCase() === word.toLowerCase());
+            if (existingWord) {
+                showMessage(`单词 "${word}" 已存在`, 'error');
+                return;
+            }
+            
+            // 添加新单词
+            words.push({
+                word: word,
+                pos: pos,
+                meaning: meaning
+            });
+            
+            // 保存到localStorage
+            saveWordsToStorage(words);
+            
+            // 清空表单
+            clearForm();
+            
+            // 重新渲染单词列表
+            renderWordList();
+            
+            // 显示成功消息
+            showMessage(`单词 "${word}" 添加成功`, 'success');
+        }
+        
+        // 删除单词
+        function deleteWord(index) {
+            const words = loadWordsFromStorage();
+            
+            if (index >= 0 && index < words.length) {
+                const deletedWord = words[index];
+                
+                // 从数组中删除单词
+                words.splice(index, 1);
+                
+                // 保存到localStorage
+                saveWordsToStorage(words);
+                
+                // 重新渲染单词列表
+                renderWordList();
+                
+                // 显示成功消息
+                showMessage(`单词 "${deletedWord.word}" 已删除`, 'success');
+            }
+        }
+        
+        // 清空表单
+        function clearForm() {
+            wordInput.value = '';
+            posInput.value = '';
+            meaningInput.value = '';
+            wordInput.focus();
+        }
+        
+        // 导出单词数据
+        function exportWords() {
+            const words = loadWordsFromStorage();
+            
+            if (words.length === 0) {
+                showMessage('没有单词可以导出', 'error');
+                return;
+            }
+            
+            // 创建JSON数据
+            const dataStr = JSON.stringify(words, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            // 创建下载链接
+            const exportFileDefaultName = 'english_words_' + new Date().toISOString().split('T')[0] + '.json';
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+            
+            showMessage('单词数据导出成功', 'success');
+        }
+        
+        // 导入单词数据
+        function importWords() {
+            importFileInput.click();
+        }
+        
+        // 处理文件导入
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            
+            if (!file) {
+                return;
+            }
+            
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    const importedWords = JSON.parse(e.target.result);
+                    
+                    // 验证导入的数据格式
+                    if (!Array.isArray(importedWords)) {
+                        showMessage('导入失败：文件格式不正确', 'error');
+                        return;
+                    }
+                    
+                    // 检查每个单词对象的格式
+                    for (let i = 0; i < importedWords.length; i++) {
+                        const word = importedWords[i];
+                        if (!word.word || !word.pos || !word.meaning) {
+                            showMessage(`导入失败：第 ${i+1} 个单词格式不正确`, 'error');
+                            return;
+                        }
+                    }
+                    
+                    // 加载现有单词
+                    const existingWords = loadWordsFromStorage();
+                    
+                    // 合并单词（避免重复）
+                    const existingWordSet = new Set(existingWords.map(w => w.word.toLowerCase()));
+                    let addedCount = 0;
+                    
+                    importedWords.forEach(word => {
+                        if (!existingWordSet.has(word.word.toLowerCase())) {
+                            existingWords.push(word);
+                            existingWordSet.add(word.word.toLowerCase());
+                            addedCount++;
+                        }
+                    });
+                    
+                    // 保存到localStorage
+                    saveWordsToStorage(existingWords);
+                    
+                    // 重新渲染单词列表
+                    renderWordList();
+                    
+                    // 显示成功消息
+                    showMessage(`成功导入 ${addedCount} 个单词，${importedWords.length - addedCount} 个重复单词被忽略`, 'success');
+                    
+                    // 清空文件输入
+                    importFileInput.value = '';
+                    
+                } catch (error) {
+                    showMessage('导入失败：文件格式不正确', 'error');
+                }
+            };
+            
+            reader.readAsText(file);
+        }
+        
+        // 清空所有单词
+        function clearAllWords() {
+            if (loadWordsFromStorage().length === 0) {
+                showMessage('单词列表已是空的', 'info');
+                return;
+            }
+            
+            if (confirm('确定要清空所有单词吗？此操作不可撤销。')) {
+                // 清空localStorage中的单词数据
+                localStorage.removeItem(WORD_STORAGE_KEY);
+                
+                // 重新渲染单词列表
+                renderWordList();
+                
+                // 显示成功消息
+                showMessage('所有单词已清空', 'success');
+            }
+        }
+        
+        // 初始化默认单词（如果单词列表为空）
+        function initDefaultWords() {
+            const words = loadWordsFromStorage();
+            
+            if (words.length === 0) {
+                const defaultWords = [
+                    { word: "gamification", pos: "n.", meaning: "游戏化" },
+                    { word: "secretary", pos: "n.", meaning: "秘书" },
+                    { word: "depress", pos: "v.", meaning: "使沮丧" },
+                    { word: "alternative", pos: "adj.", meaning: "可供替代的" },
+                    { word: "climate", pos: "n.", meaning: "气候" },
+                    { word: "tobacco", pos: "n.", meaning: "烟草" },
+                    { word: "presentation", pos: "n.", meaning: "展示" },
+                    { word: "ultimately", pos: "adv.", meaning: "最终" },
+                    { word: "spread", pos: "v./n.", meaning: "传播" },
+                    { word: "mission", pos: "n.", meaning: "使命" },
+                    { word: "frequently", pos: "adv.", meaning: "经常的" },
+                    { word: "commercial", pos: "adj.", meaning: "商业的" }
+                ];
+                
+                saveWordsToStorage(defaultWords);
+                renderWordList();
+            }
+        }
+        
+        // 事件监听器
+        document.addEventListener('DOMContentLoaded', function() {
+            // 渲染单词列表
+            renderWordList();
+            
+            // 如果没有单词，初始化默认单词
+            initDefaultWords();
+        });
+        
+        addWordBtn.addEventListener('click', addWord);
+        
+        clearFormBtn.addEventListener('click', clearForm);
+        
+        exportBtn.addEventListener('click', exportWords);
+        
+        importBtn.addEventListener('click', importWords);
+        
+        importFileInput.addEventListener('change', handleFileImport);
+        
+        clearAllBtn.addEventListener('click', clearAllWords);
+        
+        // 允许按Enter键添加单词
+        wordInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                posInput.focus();
+            }
+        });
+        
+        posInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                meaningInput.focus();
+            }
+        });
+        
+        meaningInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addWord();
+            }
+        });
+    </script>
+</body>
+</html>
