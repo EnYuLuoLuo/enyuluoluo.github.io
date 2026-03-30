@@ -728,24 +728,13 @@
             }
         }
         
-        // 初始化默认单词（如果单词列表为空）
-        function initDefaultWords() {
-            const words = loadWordsFromStorage();
-            
-            
-                
-                saveWordsToStorage(defaultWords);
-                renderWordList();
-            }
-        }
-        
         // 事件监听器
         document.addEventListener('DOMContentLoaded', function() {
             // 渲染单词列表
             renderWordList();
             
-            // 如果没有单词，初始化默认单词
-            initDefaultWords();
+            // 注意：这里已经删除了initDefaultWords()的调用
+            // 这样用户首次使用时单词列表是空的
         });
         
         addWordBtn.addEventListener('click', addWord);
