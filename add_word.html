@@ -732,21 +732,7 @@
         function initDefaultWords() {
             const words = loadWordsFromStorage();
             
-            if (words.length === 0) {
-                const defaultWords = [
-                    { word: "gamification", pos: "n.", meaning: "游戏化" },
-                    { word: "secretary", pos: "n.", meaning: "秘书" },
-                    { word: "depress", pos: "v.", meaning: "使沮丧" },
-                    { word: "alternative", pos: "adj.", meaning: "可供替代的" },
-                    { word: "climate", pos: "n.", meaning: "气候" },
-                    { word: "tobacco", pos: "n.", meaning: "烟草" },
-                    { word: "presentation", pos: "n.", meaning: "展示" },
-                    { word: "ultimately", pos: "adv.", meaning: "最终" },
-                    { word: "spread", pos: "v./n.", meaning: "传播" },
-                    { word: "mission", pos: "n.", meaning: "使命" },
-                    { word: "frequently", pos: "adv.", meaning: "经常的" },
-                    { word: "commercial", pos: "adj.", meaning: "商业的" }
-                ];
+            
                 
                 saveWordsToStorage(defaultWords);
                 renderWordList();
