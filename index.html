@@ -287,6 +287,79 @@
             text-decoration: underline;
         }
         
+        .wrong-words-section {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        .wrong-words-title {
+            color: #e74c3c;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f8d7da;
+        }
+        
+        .wrong-words-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .wrong-word-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #e74c3c;
+        }
+        
+        .wrong-word-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .wrong-word-text {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #2c3e50;
+            min-width: 150px;
+        }
+        
+        .wrong-pos-badge {
+            background-color: #f8d7da;
+            color: #c0392b;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        .wrong-meaning-text {
+            color: #444;
+            font-size: 1.1rem;
+        }
+        
+        .no-wrong-words {
+            text-align: center;
+            padding: 20px;
+            color: #27ae60;
+            font-size: 1.2rem;
+        }
+        
+        .review-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 25px;
+        }
+        
         @media (max-width: 768px) {
             .options-container {
                 grid-template-columns: 1fr;
@@ -296,7 +369,7 @@
                 font-size: 2.2rem;
             }
             
-            .controls {
+            .controls, .review-buttons {
                 flex-direction: column;
                 align-items: center;
             }
@@ -319,6 +392,18 @@
             .logo {
                 margin-bottom: 10px;
             }
+            
+            .wrong-word-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .wrong-word-info {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
         }
     </style>
 </head>
@@ -327,6 +412,7 @@
         <div class="logo">英文单词学习工具</div>
         <div class="nav-links">
             <a href="index.html" class="nav-link active">学习单词</a>
+            <a href="card.html" class="nav-link active">单词卡片</a>
             <a href="add_word.html" class="nav-link">管理单词</a>
         </div>
     </nav>
@@ -381,6 +467,13 @@
                 <div class="score" id="finalScore">0%</div>
                 <p>您已成功完成所有单词练习，点击"重新开始"可以再次练习</p>
             </div>
+            
+            <div class="wrong-words-section hidden" id="wrongWordsSection">
+                <h3 class="wrong-words-title">答错的单词</h3>
+                <div class="wrong-words-list" id="wrongWordsList">
+                    <!-- 答错的单词将通过JavaScript动态生成 -->
+                </div>
+            </div>
         </div>
         
         <div class="no-words-message hidden" id="noWordsMessage">
@@ -404,6 +497,7 @@
         let startTime = null;
         let selectedOption = false;
         let correctAnswerIndex = null;
+        let wrongAnswers = []; // 存储答错的单词
         
         // 获取DOM元素
         const currentWordElement = document.getElementById('currentWord');
@@ -421,6 +515,8 @@
         const finalScoreElement = document.getElementById('finalScore');
         const wordLearningArea = document.getElementById('wordLearningArea');
         const noWordsMessage = document.getElementById('noWordsMessage');
+        const wrongWordsSection = document.getElementById('wrongWordsSection');
+        const wrongWordsList = document.getElementById('wrongWordsList');
         
         // 从localStorage加载单词
         function loadWordsFromStorage() {
@@ -454,12 +550,14 @@
             startTime = new Date();
             selectedOption = false;
             correctAnswerIndex = null;
+            wrongAnswers = []; // 清空答错单词记录
             
             // 更新界面状态
             updateProgress();
             loadCurrentWord();
             nextBtn.classList.add('hidden');
             completionMessage.classList.add('hidden');
+            wrongWordsSection.classList.add('hidden');
             feedbackArea.textContent = "请从上方4个选项中选择正确答案";
             feedbackArea.className = "feedback";
         }
@@ -544,6 +642,13 @@
                     } else {
                         feedbackArea.textContent = `✗ 回答错误！正确答案是：${currentWordObj.meaning}`;
                         feedbackArea.className = "feedback wrong";
+                        
+                        // 记录答错的单词
+                        wrongAnswers.push({
+                            word: currentWordObj.word,
+                            pos: currentWordObj.pos,
+                            meaning: currentWordObj.meaning
+                        });
                     }
                     
                     // 高亮显示正确和错误选项
@@ -603,6 +708,41 @@
             
             // 显示完成信息
             completionMessage.classList.remove('hidden');
+            
+            // 显示答错单词区域
+            showWrongWords();
+        }
+        
+        // 显示答错单词
+        function showWrongWords() {
+            if (wrongAnswers.length === 0) {
+                wrongWordsSection.classList.remove('hidden');
+                wrongWordsList.innerHTML = `
+                    <div class="no-wrong-words">
+                        <p>太棒了！您没有答错任何单词！</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            wrongWordsSection.classList.remove('hidden');
+            wrongWordsList.innerHTML = '';
+            
+            // 显示答错单词列表
+            wrongAnswers.forEach((wrongWord, index) => {
+                const wrongWordItem = document.createElement('div');
+                wrongWordItem.className = 'wrong-word-item';
+                
+                wrongWordItem.innerHTML = `
+                    <div class="wrong-word-info">
+                        <div class="wrong-word-text">${wrongWord.word}</div>
+                        <div class="wrong-pos-badge">${wrongWord.pos}</div>
+                        <div class="wrong-meaning-text">${wrongWord.meaning}</div>
+                    </div>
+                `;
+                
+                wrongWordsList.appendChild(wrongWordItem);
+            });
         }
         
         // 事件监听器
@@ -639,12 +779,14 @@
             correctAnswers = 0;
             selectedOption = false;
             correctAnswerIndex = null;
+            wrongAnswers = []; // 清空答错单词记录
             
             // 更新界面状态
             updateProgress();
             loadCurrentWord();
             nextBtn.classList.add('hidden');
             completionMessage.classList.add('hidden');
+            wrongWordsSection.classList.add('hidden');
             feedbackArea.textContent = "请从上方4个选项中选择正确答案";
             feedbackArea.className = "feedback";
         });
